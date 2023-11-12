@@ -283,13 +283,15 @@ namespace AmootSearch.Controllers
 
             var models = new List<Model>();
 
-            var modelCount = await dc.Models.CountAsync();
+            var modelCount = await dc.Models.SumAsync(a=>a.TotalNumber);
 
             var maxTotalNumber = await dc.Models.MaxAsync(a => a.TotalNumber);
 
             var constant = (modelCount / maxTotalNumber);
 
             var views = new List<View>();
+
+            double maxValue = 0;
 
             foreach (var item in importantcombinations)
             {
@@ -303,14 +305,20 @@ namespace AmootSearch.Controllers
 
                     var value = ((double)modelCount /( (double)totalCount* constant));
 
-                    if (value > 2)
+                    if (value > 1)
                     {
+                        if (value>maxValue)
+                        {
+                            maxValue =value;
+                        }
+                       
                         var log = Math.Log(value);
                         
                         foreach (var sub in model.Subs)
                         {
                             views.Add(new View()
                             {
+                                Value=value,
                                 TextId = sub.TextId,
                                 TFIDF = sub.TF *log,
                                 Length= item.Length
@@ -320,6 +328,12 @@ namespace AmootSearch.Controllers
                 }
 
             }
+
+            if (maxValue!=0)
+            {
+                views = views.Where(a => a.Value >= maxValue).ToList();
+            }
+
 
 
             var textIds=views.Select(a=>a.TextId).Distinct().ToList();
@@ -347,6 +361,7 @@ namespace AmootSearch.Controllers
 
 public class View
 {
+    public double Value { get; set; }
     public long TextId { get; set; }
     public int Length { get; set; }
     public double TFIDF { get; set; }
